@@ -1,5 +1,5 @@
 // Host answers both the desktop sidebar's and the phone's Project grouping tests run on.
-import type { MobileProjectSectionCatalog } from '../../mobile-project-sections-contract'
+import type { MobileProjectSectionCatalog } from '../catalog/mobile-project-sections-contract'
 import type { ExecutionHostId } from '../../execution-host'
 import {
   projectHostSetupProjectionFromRepos,

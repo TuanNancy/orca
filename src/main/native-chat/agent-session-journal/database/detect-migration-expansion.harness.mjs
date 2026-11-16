@@ -45,43 +45,26 @@ for (const id of legacyIds) {
   if (domainRecords.has(copy)) copyOf.set(copy, id)
 }
 
-// A copy is needed only when the original holds an item the converted chat here never saw.
-const heldItems = (id) => {
+// A copy holds an older build's turns only if it has an item its original here never held
+// (removing an item here leaves its tombstone).
+const itemsOf = (id, withTombstones) => {
   const held = new Set()
-  for (const [table, column] of [
-    ['journal_items', 'item_id'],
-    ['journal_item_tombstones', 'item_id'],
-    ['journal_item_aliases', 'provider_item_id']
-  ]) {
+  for (const table of withTombstones ? ['journal_items', 'journal_item_tombstones'] : ['journal_items']) {
     if (!has(domain, table)) continue
-    for (const row of domain.prepare(`SELECT ${column} AS id FROM ${table} WHERE session_id=?`).iterate(id)) {
+    for (const row of domain.prepare(`SELECT item_id AS id FROM ${table} WHERE session_id=?`).iterate(id)) {
       held.add(String(row.id))
     }
   }
   return held
 }
-const itemIds = (json) => {
-  let row
-  try {
-    row = JSON.parse(json)
-  } catch {
-    return []
-  }
-  if (row?.kind === 'item' && typeof row.itemId === 'string') return [row.itemId]
-  if (row?.kind === 'lifecycle-batch' && Array.isArray(row.mutations)) {
-    return row.mutations.filter((m) => m?.kind === 'item').map((m) => String(m.itemId))
-  }
-  return []
-}
-const unseenItems = (id) => {
-  const held = heldItems(id)
-  let unseen = 0
-  for (const row of legacy.prepare('SELECT row_json FROM journal_rows WHERE session_id=?').iterate(id)) {
-    for (const item of itemIds(String(row.row_json))) if (!held.has(item)) unseen += 1
-  }
-  return unseen
-}
-const neededCopies = new Set([...copyOf].filter(([, id]) => unseenItems(id) > 0).map(([copy]) => copy))
+const neededCopies = new Set(
+  [...copyOf]
+    .filter(([copy, id]) => {
+      const held = itemsOf(id, true)
+      return [...itemsOf(copy, false)].some((item) => !held.has(item))
+    })
+    .map(([copy]) => copy)
+)
 
 // Where the original chat's history stands: its epoch and tip.
 const sourceTip = (id) => {

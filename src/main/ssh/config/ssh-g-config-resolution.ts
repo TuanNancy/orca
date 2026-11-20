@@ -53,7 +53,7 @@ export function sshGArgsForHost(host: string): string[] {
 /** OpenSSH's system-wide client config, which `-F` excludes along with the per-user one. */
 const SITE_SSH_CONFIG_FILES =
   process.platform === 'win32'
-    ? [join(process.env.ProgramData ?? 'C:\\ProgramData', 'ssh', 'ssh_config')]
+    ? [join(process.env.ProgramData?.trim() || 'C:\\ProgramData', 'ssh', 'ssh_config')]
     : ['/etc/ssh/ssh_config']
 
 const STRICT_HOST_KEY_DIRECTIVE = /^\s*stricthostkeychecking\b/i
